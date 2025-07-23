@@ -4,6 +4,7 @@ archipelago, give me my kids back.
 
 # TODO LIST!!!!
 
+## Main stuff
 - Make the logic go logic
 - Get the Python also do the logic, because I don't know how to code.
 - make deathlink work (again).
