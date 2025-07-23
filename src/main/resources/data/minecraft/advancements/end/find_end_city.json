@@ -1,58 +1,42 @@
 {
   "parent": "minecraft:end/enter_end_gateway",
-  "criteria": {
-    "in_city": {
-      "conditions": {
-        "player": [
-          {
-            "condition": "minecraft:entity_properties",
-            "entity": "this",
-            "predicate": {
-              "location": {
-                "structure": "minecraft:end_city"
-              }
-            }
-          }
-        ]
-      },
-      "trigger": "minecraft:location"
-    },
-    "in_city_nether": {
-      "conditions": {
-        "player": [
-          {
-            "condition": "minecraft:entity_properties",
-            "entity": "this",
-            "predicate": {
-              "location": {
-                "structure": "aprandomizer:end_city_nether"
-              }
-            }
-          }
-        ]
-      },
-      "trigger": "minecraft:location"
-    }
-  },
   "display": {
-    "announce_to_chat": true,
+    "icon": {
+      "item": "minecraft:purpur_block"
+    },
+    "title": {
+      "translate": "advancements.end.find_end_city.title"
+    },
     "description": {
       "translate": "advancements.end.find_end_city.description"
     },
     "frame": "task",
-    "hidden": false,
-    "icon": {
-      "item": "minecraft:purpur_block"
-    },
     "show_toast": true,
-    "title": {
-      "translate": "advancements.end.find_end_city.title"
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "in_city": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "location": {
+          "feature": "minecraft:end_city"
+        }
+      }
+    },
+    "in_nether_city": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "location": {
+          "feature": "aprandomizer:end_city_nether"
+        }
+      }
     }
   },
   "requirements": [
     [
       "in_city",
-      "in_city_nether"
+      "in_nether_city"
     ]
   ]
 }

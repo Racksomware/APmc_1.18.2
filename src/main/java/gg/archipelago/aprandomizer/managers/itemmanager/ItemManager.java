@@ -2,17 +2,23 @@ package gg.archipelago.aprandomizer.managers.itemmanager;
 
 import gg.archipelago.aprandomizer.APRandomizer;
 import gg.archipelago.aprandomizer.APStructures;
+import gg.archipelago.aprandomizer.capability.APCapabilities;
+import gg.archipelago.aprandomizer.capability.data.PlayerData;
 import gg.archipelago.aprandomizer.common.Utils.Utils;
-import gg.archipelago.aprandomizer.managers.itemmanager.traps.*;
-import net.minecraft.ChatFormatting;
+import gg.archipelago.aprandomizer.managers.itemmanager.traps.BeeTrap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ConfiguredStructureTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.EnchantedBookItem;
@@ -21,126 +27,142 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.level.levelgen.feature.StructureFeature;
+import net.minecraft.world.level.levelgen.structure.StructureSet;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Optional;
-import java.util.concurrent.Callable;
 
 public class ItemManager {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public static final long DRAGON_EGG_SHARD = 45043L;
+    public static final int DRAGON_EGG_SHARD = 45043;
 
-    private final HashMap<Long, ItemStack> itemStacks = new HashMap<>() {{
-        put(45015L, new ItemStack(Items.NETHERITE_SCRAP, 8));
-        put(45016L, new ItemStack(Items.EMERALD, 8));
-        put(45017L, new ItemStack(Items.EMERALD, 4));
+    private final HashMap<Integer, ItemStack> itemStacks = new HashMap<>() {{
 
-        put(45018L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.CHANNELING, 1)));
-        put(45019L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.SILK_TOUCH, 1)));
-        put(45020L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.SHARPNESS, 3)));
-        put(45021L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.PIERCING, 4)));
-        put(45022L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.MOB_LOOTING, 3)));
-        put(45023L, EnchantedBookItem.createForEnchantment(new EnchantmentInstance(Enchantments.INFINITY_ARROWS, 1)));
+        put(45015, new ItemStack(Items.NETHERITE_SCRAP, 8));
+        put(45016, new ItemStack(Items.EMERALD, 8));
+        put(45017, new ItemStack(Items.EMERALD, 4));
 
+        ItemStack channelingBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(channelingBook,new EnchantmentInstance(Enchantments.CHANNELING, 1));
+        put(45018, channelingBook);
 
-        put(45024L, new ItemStack(Items.DIAMOND_ORE, 4));
-        put(45025L, new ItemStack(Items.IRON_ORE, 16));
-        put(45029L, new ItemStack(Items.ENDER_PEARL, 3));
-        put(45004L, new ItemStack(Items.LAPIS_LAZULI, 4));
-        put(45030L, new ItemStack(Items.LAPIS_LAZULI, 4));
-        put(45031L, new ItemStack(Items.COOKED_PORKCHOP, 16));
-        put(45032L, new ItemStack(Items.GOLD_ORE, 8));
-        put(45033L, new ItemStack(Items.ROTTEN_FLESH, 8));
-        var arrow = new ItemStack(Items.ARROW, 1);
-        Utils.setItemName(arrow, "The Arrow");
-        put(45034L, arrow);
-        put(45035L, new ItemStack(Items.ARROW, 32));
-        put(45036L, new ItemStack(Items.SADDLE, 1));
+        ItemStack silkTouchBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(silkTouchBook,new EnchantmentInstance(Enchantments.SILK_TOUCH, 1));
+        put(45019, silkTouchBook);
+
+        ItemStack sharpnessBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(sharpnessBook,new EnchantmentInstance(Enchantments.SHARPNESS, 3));
+        put(45020, sharpnessBook);
+
+        ItemStack piercingBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(piercingBook,new EnchantmentInstance(Enchantments.PIERCING, 4));
+        put(45021, piercingBook);
+
+        ItemStack lootingBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(lootingBook,new EnchantmentInstance(Enchantments.MOB_LOOTING, 3));
+        put(45022, lootingBook);
+
+        ItemStack infinityBook = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantedBookItem.addEnchantment(infinityBook,new EnchantmentInstance(Enchantments.INFINITY_ARROWS, 1));
+        put(45023, infinityBook);
+
+        put(45024, new ItemStack(Items.DIAMOND_ORE, 4));
+        put(45025, new ItemStack(Items.IRON_ORE, 16));
+        put(45029, new ItemStack(Items.ENDER_PEARL, 3));
+        put(45004, new ItemStack(Items.LAPIS_LAZULI, 4));
+        put(45030, new ItemStack(Items.LAPIS_LAZULI, 4));
+        put(45031, new ItemStack(Items.COOKED_PORKCHOP, 16));
+        put(45032, new ItemStack(Items.GOLD_ORE, 8));
+        put(45033, new ItemStack(Items.ROTTEN_FLESH, 8));
+        put(45034, new ItemStack(Items.ARROW, 1).setHoverName(new TextComponent("The Arrow")));
+        put(45035, new ItemStack(Items.ARROW, 32));
+        put(45036, new ItemStack(Items.SADDLE, 1));
+
+        String[] compassLore = new String[]{"Right click with compass in hand to","cycle to next known structure location."};
 
         ItemStack villageCompass = new ItemStack(Items.COMPASS, 1);
         makeCompass(villageCompass, APStructures.VILLAGE_TAG);
-        put(45037L, villageCompass);
+        addLore(villageCompass, "Structure Compass (Village)", compassLore);
+        put(45037, villageCompass);
 
         ItemStack outpostCompass = new ItemStack(Items.COMPASS, 1);
         makeCompass(outpostCompass, APStructures.OUTPOST_TAG);
-        put(45038L, outpostCompass);
+        addLore(outpostCompass, "Structure Compass (Pillager Outpost)", compassLore);
+        put(45038, outpostCompass);
 
         ItemStack fortressCompass = new ItemStack(Items.COMPASS, 1);
         makeCompass(fortressCompass, APStructures.FORTRESS_TAG);
-        put(45039L, fortressCompass);
+        addLore(fortressCompass, "Structure Compass (Nether Fortress)", compassLore);
+        put(45039, fortressCompass);
 
         ItemStack bastionCompass = new ItemStack(Items.COMPASS, 1);
         makeCompass(bastionCompass, APStructures.BASTION_REMNANT_TAG);
-        put(45040L,bastionCompass);
+        addLore(bastionCompass, "Structure Compass (Bastion Remnant)", compassLore);
+        put(45040,bastionCompass);
 
         ItemStack endCityCompass = new ItemStack(Items.COMPASS, 1);
         makeCompass(endCityCompass, APStructures.END_CITY_TAG);
-        put(45041L, endCityCompass);
+        addLore(endCityCompass, "Structure Compass (End City)", compassLore);
+        put(45041, endCityCompass);
 
-        put(45042L, new ItemStack(Items.SHULKER_BOX, 1));
+        put(45042, new ItemStack(Items.SHULKER_BOX, 1));
     }};
 
-    private final HashMap<Long,TagKey<Structure>> compasses = new HashMap<>() {{
-        put(45037L, APStructures.VILLAGE_TAG);
-        put(45038L, APStructures.OUTPOST_TAG);
-        put(45039L, APStructures.FORTRESS_TAG);
-        put(45040L, APStructures.BASTION_REMNANT_TAG);
-        put(45041L, APStructures.END_CITY_TAG);
+    private final HashMap<Integer,TagKey<ConfiguredStructureFeature<?,?>>> compasses = new HashMap<>() {{
+        put(45037, APStructures.VILLAGE_TAG);
+        put(45038, APStructures.OUTPOST_TAG);
+        put(45039, APStructures.FORTRESS_TAG);
+        put(45040, APStructures.BASTION_REMNANT_TAG);
+        put(45041, APStructures.END_CITY_TAG);
 
     }};
 
-    private final HashMap<Long, Integer> xpData = new HashMap<>() {{
-        put(45026L, 500);
-        put(45027L, 100);
-        put(45028L, 50);
+    private final HashMap<Integer, Integer> xpData = new HashMap<>() {{
+        put(45026, 500);
+        put(45027, 100);
+        put(45028, 50);
     }};
 
-    long index = 45100L;
-    private final HashMap<Long, Callable<Trap>> trapData = new HashMap<>() {{
-        put(index++, BeeTrap::new);
-        put(index++, CreeperTrap::new);
-        put(index++, SandRain::new);
-        put(index++, FakeWither::new);
-        put(index++, GoonTrap::new);
-        put(index++, FishFountainTrap::new);
-        put(index++, MiningFatigueTrap::new);
-        put(index++, BlindnessTrap::new);
-        put(index++, PhantomTrap::new);
-        put(index++, WaterTrap::new);
-        put(index++, GhastTrap::new);
-        put(index++, LevitateTrap::new);
-        put(index++, AboutFaceTrap::new);
-        put(index++, AnvilTrap::new);
+    private final HashMap<Integer, Trap> trapData = new HashMap<>() {{
+        put(45100, new BeeTrap(3));
     }};
 
-    private ArrayList<Long> receivedItems = new ArrayList<>();
+    private ArrayList<Integer> receivedItems = new ArrayList<>();
 
-    private final ArrayList<TagKey<Structure>> receivedCompasses = new ArrayList<>();
+    private final ArrayList<TagKey<ConfiguredStructureFeature<?,?>>> receivedCompasses = new ArrayList<>();
 
-    private void makeCompass(ItemStack iStack, TagKey<Structure> structureTag) {
+    private void makeCompass(ItemStack iStack, TagKey<ConfiguredStructureFeature<?,?>> structureTag) {
         CompoundTag nbt = iStack.getOrCreateTag();
         nbt.put("structure", StringTag.valueOf(structureTag.location().toString()));
 
         BlockPos structureCords = new BlockPos(0,0,0);
+
         Utils.addLodestoneTags(Utils.getStructureWorld(structureTag),structureCords, iStack.getOrCreateTag());
-        Utils.setItemName(iStack, "uninitialized structure compass");
-        Utils.setItemLore(iStack, new ArrayList<>(){{
-            add("oops, this compass is broken.");
-            add("right click with compass in hand to fix.");
-            add("hopefully it will point to the right place.");
-            add("no guarantees.");
-        }});
     }
 
-    public void setReceivedItems(ArrayList<Long> items) {
+    private void addLore(ItemStack iStack, String name, String[] compassLore) {
+        iStack.setHoverName(new TextComponent(name));
+        CompoundTag compoundnbt = iStack.getOrCreateTagElement("display");
+        ListTag itemLoreLines = new ListTag();
+        for (String s : compassLore) {
+            StringTag itemLore = StringTag.valueOf(Component.Serializer.toJson(new TextComponent(s)));
+            itemLoreLines.add(itemLore);
+        }
+        compoundnbt.put("Lore",itemLoreLines);
+    }
+
+    public void setReceivedItems(ArrayList<Integer> items) {
         this.receivedItems = items;
-        for (var item : items) {
+        for (Integer item : items) {
             if(compasses.containsKey(item) && !receivedCompasses.contains(compasses.get(item))) {
                 receivedCompasses.add(compasses.get(item));
             }
@@ -148,22 +170,22 @@ public class ItemManager {
         APRandomizer.getGoalManager().updateGoal(false);
     }
 
-        public void giveItem(Long itemID, ServerPlayer player, int itemIndex) {
+    public void giveItem(int itemID, ServerPlayer player) {
         if (APRandomizer.isJailPlayers()) {
             //dont send items to players if game has not started.
             return;
         }
-
-        if (APRandomizer.getWorldData().getPlayerIndex(player.getStringUUID()) >= itemIndex) return;
-
         //update the player's index of received items for syncing later.
-        APRandomizer.getWorldData().updatePlayerIndex(player.getStringUUID(),itemIndex);
+        LazyOptional<PlayerData> loPlayerData = player.getCapability(APCapabilities.PLAYER_INDEX);
+        if (loPlayerData.isPresent()) {
+            PlayerData playerData = loPlayerData.orElseThrow(AssertionError::new);
+            playerData.setIndex(receivedItems.size());
+        }
 
         if (itemStacks.containsKey(itemID)) {
             ItemStack itemstack = itemStacks.get(itemID).copy();
             if(compasses.containsKey(itemID)){
-
-                TagKey<Structure> tag = compasses.get(itemID);
+                TagKey<ConfiguredStructureFeature<?,?>> tag = TagKey.create(Registry.CONFIGURED_STRUCTURE_FEATURE_REGISTRY, new ResourceLocation(itemstack.getOrCreateTag().getString("structure")));
                 updateCompassLocation(tag, player , itemstack);
             }
             Utils.giveItemToPlayer(player, itemstack);
@@ -171,15 +193,12 @@ public class ItemManager {
             int xpValue = xpData.get(itemID);
             player.giveExperiencePoints(xpValue);
         } else if (trapData.containsKey(itemID)) {
-            try {
-                trapData.get(itemID).call().trigger(player);
-            } catch (Exception ignored) {
-            }
+            trapData.get(itemID).trigger(player);
         }
     }
 
 
-    public void giveItemToAll(long itemID, int index) {
+    public void giveItemToAll(int itemID) {
 
         receivedItems.add(itemID);
         //check if this item is a structure compass, and we are not already tracking that one.
@@ -189,7 +208,7 @@ public class ItemManager {
 
         APRandomizer.getServer().execute(() -> {
             for (ServerPlayer serverplayerentity : APRandomizer.getServer().getPlayerList().getPlayers()) {
-                giveItem(itemID, serverplayerentity, index);
+                giveItem(itemID, serverplayerentity);
             }
         });
 
@@ -201,23 +220,25 @@ public class ItemManager {
      * @param player ServerPlayer to catch up
      */
     public void catchUpPlayer(ServerPlayer player) {
-        int playerIndex = APRandomizer.getWorldData().getPlayerIndex(player.getStringUUID());
+        LazyOptional<PlayerData> loPlayerData = player.getCapability(APCapabilities.PLAYER_INDEX);
+        if (loPlayerData.isPresent()) {
+            PlayerData playerData = loPlayerData.orElseThrow(AssertionError::new);
 
-        for (int i = playerIndex; i < receivedItems.size(); i++) {
-            giveItem(receivedItems.get(i), player, i+1);
+            for (int i = playerData.getIndex(); i < receivedItems.size(); i++) {
+                giveItem(receivedItems.get(i), player);
+            }
         }
-
     }
 
-    public ArrayList<TagKey<Structure>> getCompasses() {
+    public ArrayList<TagKey<ConfiguredStructureFeature<?,?>>> getCompasses() {
         return receivedCompasses;
     }
 
-    public ArrayList<Long> getAllItems() {
+    public ArrayList<Integer> getAllItems() {
         return receivedItems;
     }
 
-    public static void updateCompassLocation(TagKey<Structure> structureTag, Player player, ItemStack compass) {
+    public static void updateCompassLocation(TagKey<ConfiguredStructureFeature<?,?>> structureTag, Player player, ItemStack compass) {
 
         //get the actual structure data from forge, and make sure its changed to the AP one if needed.
 
@@ -227,56 +248,19 @@ public class ItemManager {
         //only locate structure if the player is in the same world as the one for the compass
         //otherwise just point it to 0,0 in said dimension.
         BlockPos structurePos = new BlockPos(0,0,0);
-        ArrayList<String> lore = new ArrayList<>(){{
-            add("Right click with compass in hand to");
-            add("cycle though unlocked compasses.");
-        }};
-        var displayName = Component.literal(String.format("Structure Compass (%s)", Utils.getAPStructureName(structureTag)));
         if(player.getCommandSenderWorld().dimension().equals(world)) {
-            try {
-                structurePos = APRandomizer.getServer().getLevel(world).findNearestMapStructure(structureTag, player.blockPosition(), 75, false);
-                lore.add(0,"Location X: " + structurePos.getX() + ", Z: " + structurePos.getZ());
-            } catch (NullPointerException exception) {
-                player.sendSystemMessage(Component.literal("Could not find a nearby " + Utils.getAPStructureName(structureTag)));
-                displayName = Component.literal(
-                        String.format("Structure Compass (%s) Not Found",
-                                Utils.getAPStructureName(structureTag))
-                ).withStyle(ChatFormatting.YELLOW);
-            }
+        structurePos = APRandomizer.getServer().getLevel(world).findNearestMapFeature(structureTag, player.blockPosition(), 75, false);
         }
-        else {
-            displayName = Component.literal(
-                    String.format("Structure Compass (%s) Wrong Dimension",
-                            Utils.getAPStructureName(structureTag))
-                    ).withStyle(ChatFormatting.DARK_RED);
-        }
+
+        String displayName = Utils.getAPStructureName(structureTag);
 
         if(structurePos == null)
             structurePos = new BlockPos(0,0,0);
-        //update the nbt data with our new structure.
 
         CompoundTag nbt = compass.getOrCreateTag();
         //update the nbt data with our new structure.
         nbt.put("structure", StringTag.valueOf(structureTag.location().toString()));
         Utils.addLodestoneTags(world,structurePos,nbt);
-        Utils.setNameAndLore(compass, displayName, lore);
-    }
-
-        // refresh all compasses in player inventory
-    public static void refreshCompasses(ServerPlayer player) {
-        player.getInventory().items.forEach( (item) -> {
-            if(item.getItem().equals(Items.COMPASS)) {
-                if(!item.hasTag())
-                    return;
-                CompoundTag nbt = item.getOrCreateTag();
-                if(nbt.get("structure") == null)
-                    return;
-
-                try {
-                    TagKey<Structure> tagKey = TagKey.create(Registries.STRUCTURE, ResourceLocation.tryParse(nbt.getString("structure")));
-                    updateCompassLocation(tagKey, player, item);
-                } catch (Exception ignored) {}
-            }
-        });
+        compass.setHoverName(new TextComponent(String.format("Structure Compass (%s)", displayName)));
     }
 }

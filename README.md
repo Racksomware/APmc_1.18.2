@@ -1,11 +1,9 @@
-I no longer plan on working on this, anyone is free to use any part of the code to continue maintaing this if they so wish.
-
 # Minecraft Randomizer Setup Guide
 
 ## Required Software
 
 - Minecraft Java Edition from
-  the [Minecraft Java Edition Store Page](https://www.minecraft.net/en-us/store/minecraft-java-edition)
+  the [Minecraft Java Edition Store Page](https://www.minecraft.net/en-us/store/minecraft-java-edition) (update 1.17.1)
 - Archipelago from the [Archipelago Releases Page](https://github.com/ArchipelagoMW/Archipelago/releases)
    - (select `Minecraft Client` during installation.)
 
@@ -30,12 +28,12 @@ When you join a multiworld game, you will be asked to provide your YAML file to 
 the host will provide you with either a link to download your data file, or with a zip file containing everyone's data
 files. Your data file should have a `.apmc` extension.
 
-Double-click on your `.apmc` file to have the Minecraft APClient auto-launch the installed forge server. Make sure to
+Double-click on your `.apmc` file to have the Minecraft client auto-launch the installed forge server. Make sure to
 leave this window open as this is your server console.
 
 ### Connect to the MultiServer
 
-Using minecraft 1.19 connect to the server `localhost`.
+Using minecraft 1.17.1 connect to the server `localhost`.
 
 Once you are in game type `/connect <AP-Address> (Port) (Password)` where `<AP-Address>` is the address of the
 Archipelago server. `(Port)` is only required if the Archipelago server is not using the default port of
@@ -56,8 +54,8 @@ the following links are the versions of the software we use.
 
 ### Manual install Software links
 
-- [Minecraft Forge Download Page](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.19.html)
+- [Minecraft Forge Download Page](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.17.1.html)
 - [Minecraft Archipelago Randomizer Mod Releases Page](https://github.com/KonoTyran/Minecraft_AP_Randomizer/releases)
    - **DO NOT INSTALL THIS ON YOUR CLIENT**
-- [Java 17 Download Page](https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/downloads-list.html)
+- [Java 16 Download Page](https://docs.aws.amazon.com/corretto/latest/corretto-16-ug/downloads-list.html)
 

@@ -1,14 +1,12 @@
 package gg.archipelago.aprandomizer.common.events;
 
-import dev.koifysh.archipelago.network.client.BouncePacket;
+import gg.archipelago.APClient.network.BouncePacket;
 import gg.archipelago.aprandomizer.APRandomizer;
 import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,19 +27,19 @@ public class onLivingHurt {
 
     @SubscribeEvent
     static void onLivingDeathEvent(LivingDeathEvent event) {
-        if(!APRandomizer.isConnected())
+        ResourceLocation location = event.getEntity().getType().getRegistryName();
+        if(location == null)
             return;
 
-        String name = event.getEntity().getEncodeId();
-        if(!APRandomizer.getAP().getSlotData().MC35)
+        if(APRandomizer.isConnected() && !APRandomizer.getAP().getSlotData().MC35)
             return;
 
         Entity damageSource = event.getSource().getEntity();
         if(damageSource != null && damageSource.getType() == EntityType.PLAYER) {
             BouncePacket packet = new BouncePacket();
             packet.tags = new String[]{"MC35"};
-            packet.setData(new HashMap<>() {{
-                put("enemy", name);
+            packet.setData(new HashMap<String, Object>() {{
+                put("enemy", location.toString());
                 put("source", APRandomizer.getAP().getSlot());
                 CompoundTag nbt = event.getEntity().saveWithoutId(new CompoundTag());
                 nbt.remove("UUID");
@@ -56,13 +54,13 @@ public class onLivingHurt {
 
     @SubscribeEvent
     static void onLivingHurtEvent(LivingHurtEvent event) {
-        LivingEntity entity = event.getEntity();
+        LivingEntity entity = event.getEntityLiving();
         if (entity instanceof Pig) {
             if (entity.getPassengers().size() > 0) {
                 if (entity.getPassengers().get(0) instanceof ServerPlayer) {
-                    if (event.getSource().getMsgId().equals("fall")) {
+                    if (event.getSource().msgId.equals("fall")) {
                         ServerPlayer player = (ServerPlayer) entity.getPassengers().get(0);
-                        AdvancementHolder advancement = event.getEntity().getServer().getAdvancements().get(new ResourceLocation("aprandomizer:archipelago/ride_pig"));
+                        Advancement advancement = event.getEntityLiving().getServer().getAdvancements().getAdvancement(new ResourceLocation("aprandomizer:archipelago/ride_pig"));
                         AdvancementProgress ap = player.getAdvancements().getOrStartProgress(advancement);
                         if (!ap.isDone()) {
                             for (String s : ap.getRemainingCriteria()) {
@@ -78,8 +76,8 @@ public class onLivingHurt {
         if (e instanceof ServerPlayer) {
             ServerPlayer player = (ServerPlayer) e;
             //Utils.sendMessageToAll("damage type: "+ event.getSource().getMsgId());
-            if (event.getAmount() >= 18 && !event.getSource().is(DamageTypes.EXPLOSION) && !event.getSource().getMsgId().equals("fireball")) {
-                AdvancementHolder a = event.getEntity().getServer().getAdvancements().get(new ResourceLocation("aprandomizer:archipelago/overkill"));
+            if (event.getAmount() >= 18 && !event.getSource().isExplosion() && !event.getSource().msgId.equals("fireball")) {
+                Advancement a = event.getEntityLiving().getServer().getAdvancements().getAdvancement(new ResourceLocation("aprandomizer:archipelago/overkill"));
                 AdvancementProgress ap = player.getAdvancements().getOrStartProgress(a);
                 if (!ap.isDone()) {
                     for (String s : ap.getRemainingCriteria()) {

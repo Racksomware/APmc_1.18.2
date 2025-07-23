@@ -1,9 +1,8 @@
 package gg.archipelago.aprandomizer.managers.recipemanager;
 
 import gg.archipelago.aprandomizer.APRandomizer;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.Recipe;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -21,19 +20,17 @@ public class RecipeManager {
     //have a lookup of every advancement
     private final RecipeData recipeData;
 
-    private final Set<RecipeHolder<?>> initialRestricted = new HashSet<>();
-    private final Set<RecipeHolder<?>> initialGranted = new HashSet<>();
+    private final Set<Recipe<?>> initialRestricted = new HashSet<>();
+    private final Set<Recipe<?>> initialGranted = new HashSet<>();
 
-    private Set<RecipeHolder<?>> restricted = new HashSet<>();
-    private Set<RecipeHolder<?>> granted = new HashSet<>();
-
-    private Set<ResourceLocation> itemAdvancements = new HashSet<>();
+    private Set<Recipe<?>> restricted = new HashSet<>();
+    private Set<Recipe<?>> granted = new HashSet<>();
 
 
     public RecipeManager() {
         recipeData = new RecipeData();
-        Collection<RecipeHolder<?>> recipeList = APRandomizer.getServer().getRecipeManager().getRecipes();
-        for (RecipeHolder<?> iRecipe : recipeList) {
+        Collection<Recipe<?>> recipeList = APRandomizer.getServer().getRecipeManager().getRecipes();
+        for (Recipe<?> iRecipe : recipeList) {
             if (recipeData.injectIRecipe(iRecipe)) {
                 initialRestricted.add(iRecipe);
             } else {
@@ -44,45 +41,41 @@ public class RecipeManager {
         granted = initialGranted;
     }
 
-    public void grantRecipeList(List<Long> recipes) {
-        for (var id : recipes) {
+    public boolean grantRecipeList(List<Integer> recipes) {
+        for (Integer id : recipes) {
             if (!recipeData.hasID(id))
                 continue;
-            grantRecipe(id);
-            return;
+            Set<Recipe<?>> toGrant = recipeData.getID(id).getGrantedRecipes();
+            granted.addAll(toGrant);
+            restricted.removeAll(toGrant);
         }
+        for (ServerPlayer player : APRandomizer.getServer().getPlayerList().getPlayers()) {
+            player.resetRecipes(restricted);
+            player.awardRecipes(granted);
+
+        }
+        return true;
     }
 
-    public void grantRecipe(long id) {
+    public void grantRecipe(int id) {
         if (!recipeData.hasID(id))
             return;
-        Set<RecipeHolder<?>> toGrant = recipeData.getID(id).getGrantedRecipes();
+        Set<Recipe<?>> toGrant = recipeData.getID(id).getGrantedRecipes();
 
         granted.addAll(toGrant);
         restricted.removeAll(toGrant);
-        itemAdvancements.addAll(recipeData.getID(id).getUnlockedTrackingAdvancements());
 
         for (ServerPlayer player : APRandomizer.getServer().getPlayerList().getPlayers()) {
             //player.resetRecipes(restricted);
             player.awardRecipes(granted);
-
-            var serverAdvancements = APRandomizer.getServer().getAdvancements();
-            recipeData.getID(id).getUnlockedTrackingAdvancements().forEach(
-                    location -> {
-                        var trackingAdvancement = serverAdvancements.get(location);
-                        if (trackingAdvancement != null) {
-                            APRandomizer.getAdvancementManager().syncAdvancement(trackingAdvancement);
-                        }
-
-                    });
         }
     }
 
-    public Set<RecipeHolder<?>> getRestrictedRecipes() {
+    public Set<Recipe<?>> getRestrictedRecipes() {
         return restricted;
     }
 
-    public Set<RecipeHolder<?>> getGrantedRecipes() {
+    public Set<Recipe<?>> getGrantedRecipes() {
         return granted;
     }
 
@@ -90,9 +83,5 @@ public class RecipeManager {
         restricted = initialRestricted;
         granted = initialGranted;
         recipeData.reset();
-    }
-
-    public boolean hasReceived(ResourceLocation id) {
-        return itemAdvancements.contains(id);
     }
 }

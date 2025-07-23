@@ -4,9 +4,9 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import gg.archipelago.aprandomizer.ap.APClient;
+import gg.archipelago.aprandomizer.APClient;
 import gg.archipelago.aprandomizer.APRandomizer;
-import gg.archipelago.aprandomizer.ap.storage.APMCData;
+import gg.archipelago.aprandomizer.APStorage.APMCData;
 import gg.archipelago.aprandomizer.common.Utils.Utils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -15,8 +15,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.net.URISyntaxException;
 
 @Mod.EventBusSubscriber
 public class ConnectCommand {
@@ -29,13 +27,36 @@ public class ConnectCommand {
 
         dispatcher.register(
                 Commands.literal("connect") //base slash command is "connect"
-                        .executes(context -> connectToAPServer(context, null, -2, null))
                         //take the first argument as a string and name it "Address"
+                        .then(Commands.literal("archipelago.gg")
+                                .executes(context -> connectToAPServer(
+                                        context,
+                                        "archipelago.gg",
+                                        38281,
+                                        null
+                                ))
+                                .then(Commands.argument("Port", IntegerArgumentType.integer())
+                                        .executes(context -> connectToAPServer(
+                                                context,
+                                                "archipelago.gg",
+                                                IntegerArgumentType.getInteger(context, "Port"),
+                                                null
+                                        ))
+                                        .then(Commands.argument("Password", StringArgumentType.string())
+                                                .executes(context -> connectToAPServer(
+                                                        context,
+                                                        "archipelago.gg",
+                                                        IntegerArgumentType.getInteger(context, "Port"),
+                                                        StringArgumentType.getString(context, "Password")
+                                                ))
+                                        )
+                                )
+                        )
                         .then(Commands.argument("Address", StringArgumentType.string())
                                 .executes(context -> connectToAPServer(
                                         context,
                                         StringArgumentType.getString(context, "Address"),
-                                        -1,
+                                        38281,
                                         null
                                 ))
                                 .then(Commands.argument("Port", IntegerArgumentType.integer())
@@ -61,22 +82,14 @@ public class ConnectCommand {
 
     private static int connectToAPServer(CommandContext<CommandSourceStack> commandContext, String hostname, int port, String password) {
         APMCData data = APRandomizer.getApmcData();
-        if(hostname == null) {
-            hostname = data.server;
-            port = data.port;
-        }
         if (data.state == APMCData.State.VALID) {
 
-            APClient APClient = APRandomizer.getAP();
-            APClient.setName(data.player_name);
-            APClient.setPassword(password);
-            String address = (port==-1) ? hostname : hostname.concat(":" + port);
+            APClient apClient = APRandomizer.getAP();
+            apClient.setName(data.player_name);
+            apClient.setPassword(password);
+            String address = hostname.concat(":" + port);
             Utils.sendMessageToAll("Connecting to Archipelago server at " + address);
-            try {
-                APClient.connect(address);
-            } catch (URISyntaxException e) {
-                Utils.sendMessageToAll("Malformed address " + address);
-            }
+            apClient.connect(address);
         } else if (data.state == APMCData.State.MISSING)
             Utils.sendMessageToAll("no .apmc file found. please stop the server,  place .apmc file in './APData/', delete the world folder, then relaunch the server.");
         else if (data.state == APMCData.State.INVALID_VERSION)

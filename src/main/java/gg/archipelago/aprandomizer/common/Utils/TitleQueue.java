@@ -38,8 +38,4 @@ public class TitleQueue {
     public static void queueTitle(QueuedTitle queuedTitle) {
         titleQueue.add(queuedTitle);
     }
-
-    public static void clearTitleQueue() {
-        titleQueue.clear();
-    }
 }

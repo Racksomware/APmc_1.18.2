@@ -1,12 +1,11 @@
 package gg.archipelago.aprandomizer.common.events;
 
 import gg.archipelago.aprandomizer.APRandomizer;
-import gg.archipelago.aprandomizer.ap.storage.APMCData;
+import gg.archipelago.aprandomizer.APStorage.APMCData;
 import gg.archipelago.aprandomizer.common.Utils.Utils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -23,27 +22,23 @@ public class onJoin {
 
     @SubscribeEvent
     static void onPlayerLoginEvent(PlayerEvent.PlayerLoggedInEvent event) {
-
-        ServerPlayer player = (ServerPlayer) event.getEntity();
-        if(APRandomizer.isRace())
-                player.setGameMode(GameType.SURVIVAL);
-
+        if(APRandomizer.isRace()) {
+            if(event.getPlayer() instanceof ServerPlayer) {
+                ((ServerPlayer) event.getPlayer()).setGameMode(GameType.SURVIVAL);
+            }
+        }
+        ServerPlayer player = (ServerPlayer) event.getPlayer();
         APMCData data = APRandomizer.getApmcData();
-        if (data.state == APMCData.State.MISSING) {
+        if (data.state == APMCData.State.MISSING)
             Utils.sendMessageToAll("No APMC file found, please only start the server via the APMC file.");
-            return;
-        }
-        else if (data.state == APMCData.State.INVALID_VERSION) {
+        else if (data.state == APMCData.State.INVALID_VERSION)
             Utils.sendMessageToAll("This Seed was generated using an incompatible randomizer version.");
-            return;
-        }
-        else if (data.state == APMCData.State.INVALID_SEED) {
-            Utils.sendMessageToAll("Supplied APMC file does not match world loaded. something went very wrong here.");
-            return;
-        }
+        else if (data.state == APMCData.State.INVALID_SEED)
+            Utils.sendMessageToAll("Invalid Minecraft World please only start the Minecraft server via the correct APMC file");
+
         APRandomizer.getAdvancementManager().syncAllAdvancements();
-        Set<RecipeHolder<?>> restricted = APRandomizer.getRecipeManager().getRestrictedRecipes();
-        Set<RecipeHolder<?>> granted = APRandomizer.getRecipeManager().getGrantedRecipes();
+        Set<Recipe<?>> restricted = APRandomizer.getRecipeManager().getRestrictedRecipes();
+        Set<Recipe<?>> granted = APRandomizer.getRecipeManager().getGrantedRecipes();
         player.resetRecipes(restricted);
         player.awardRecipes(granted);
 
@@ -54,7 +49,7 @@ public class onJoin {
         if(APRandomizer.isJailPlayers()) {
             BlockPos jail = APRandomizer.getJailPosition();
             player.teleportTo(jail.getX(),jail.getY(),jail.getZ());
-            player.setGameMode(GameType.SURVIVAL);
+            ((ServerPlayer) event.getPlayer()).setGameMode(GameType.SURVIVAL);
         }
     }
 }

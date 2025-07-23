@@ -1,24 +1,26 @@
 package gg.archipelago.aprandomizer.managers;
 
-import dev.koifysh.archipelago.ClientStatus;
+import gg.archipelago.APClient.ClientStatus;
 import gg.archipelago.aprandomizer.APRandomizer;
-import gg.archipelago.aprandomizer.ap.storage.APMCData;
+import gg.archipelago.aprandomizer.APStorage.APMCData;
+import gg.archipelago.aprandomizer.capability.APCapabilities;
+import gg.archipelago.aprandomizer.capability.data.WorldData;
 import gg.archipelago.aprandomizer.common.Utils.Utils;
-import gg.archipelago.aprandomizer.data.WorldData;
 import gg.archipelago.aprandomizer.managers.advancementmanager.AdvancementManager;
 import gg.archipelago.aprandomizer.managers.itemmanager.ItemManager;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.bossevents.CustomBossEvent;
 import net.minecraft.server.bossevents.CustomBossEvents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -54,19 +56,17 @@ public class GoalManager {
 
     public void initializeInfoBar() {
         CustomBossEvents bossInfoManager = APRandomizer.getServer().getCustomBossEvents();
-        advancementInfoBar = bossInfoManager.create(new ResourceLocation(APRandomizer.MODID,"advancementinfobar"), Component.literal(""));
+        advancementInfoBar = bossInfoManager.create(new ResourceLocation(APRandomizer.MODID,"advancementinfobar"), new TextComponent(""));
         advancementInfoBar.setMax(advancementsRequired);
         advancementInfoBar.setColor(BossEvent.BossBarColor.PINK);
         advancementInfoBar.setOverlay(BossEvent.BossBarOverlay.NOTCHED_10);
 
-        eggInfoBar = bossInfoManager.create(new ResourceLocation(APRandomizer.MODID,"egginfobar"), Component.literal(""));
+        eggInfoBar = bossInfoManager.create(new ResourceLocation(APRandomizer.MODID,"egginfobar"), new TextComponent(""));
         eggInfoBar.setMax(dragonEggShardsRequired);
         eggInfoBar.setColor(BossEvent.BossBarColor.WHITE);
         eggInfoBar.setOverlay(BossEvent.BossBarOverlay.NOTCHED_6);
 
-        connectionInfoBar = bossInfoManager.create(
-                new ResourceLocation(APRandomizer.MODID,"connectioninfobar"),
-                Component.literal("Not connected to Archipelago").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)));
+        connectionInfoBar = bossInfoManager.create(new ResourceLocation(APRandomizer.MODID,"connectioninfobar"), new TextComponent("Not connected to Archipelago").withStyle(Style.EMPTY.withColor(TextColor.parseColor("red"))));
         connectionInfoBar.setMax(1);
         connectionInfoBar.setValue(1);
         connectionInfoBar.setColor(BossEvent.BossBarColor.RED);
@@ -82,7 +82,7 @@ public class GoalManager {
         updateInfoBar();
         if(canFinish)
             checkGoalCompletion();
-        checkBossMessages();
+        checkDragonSpawn();
     }
 
 
@@ -103,7 +103,7 @@ public class GoalManager {
 
     private int currentEggShards() {
         int current = 0;
-        for (var item : APRandomizer.getItemManager().getAllItems()) {
+        for (Integer item : APRandomizer.getItemManager().getAllItems()) {
             if(item == ItemManager.DRAGON_EGG_SHARD) {
                 ++current;
             }
@@ -125,8 +125,8 @@ public class GoalManager {
 
         connectionInfoBar.setVisible(!APRandomizer.isConnected());
 
-        advancementInfoBar.setName(Component.literal(getAdvancementRemainingString()));
-        eggInfoBar.setName(Component.literal(getEggShardsRemainingString()));
+        advancementInfoBar.setName(new TextComponent(getAdvancementRemainingString()));
+        eggInfoBar.setName(new TextComponent(getEggShardsRemainingString()));
 
     }
 
@@ -154,23 +154,21 @@ public class GoalManager {
         }
     }
 
-    public void checkBossMessages() {
-        WorldData worldData = APRandomizer.getWorldData();
+    public void checkDragonSpawn() {
+        ServerLevel end = APRandomizer.getServer().getLevel(Level.END);
+        assert end != null;
+        assert end.dragonFight != null;
+        WorldData endData = end.getCapability(APCapabilities.WORLD_DATA).orElseThrow(AssertionError::new);
 
-        //check if the dragon message has been sent, and send it if needed.
-        if (goalsDone() && worldData.getDragonState() == WorldData.ASLEEP && isBossRequired(APMCData.Bosses.ENDER_DRAGON)) {
-            worldData.setDragonState(WorldData.WAITING);
+        //check if the dragon is not spawned and we need to spawn it.
+        if (goalsDone() && endData.getDragonState() == WorldData.DRAGON_ASLEEP) {
+            //set the dragon state to spawn as soon as the end 0,0 chunk is loaded
+            endData.setDragonState(WorldData.DRAGON_WAITING);
             Utils.PlaySoundToAll(SoundEvents.ENDER_DRAGON_AMBIENT);
-            Utils.sendMessageToAll("The Dragon is waiting...");
-            Utils.sendTitleToAll(Component.literal("The Dragon").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(java.awt.Color.ORANGE.getRGB()))), Component.literal("is waiting..."), 40, 120, 40);
-        }
+            Utils.sendMessageToAll("The Dragon has awoken.");
+            Utils.sendTitleToAll(new TextComponent("Ender Dragon").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(java.awt.Color.ORANGE.getRGB()))), new TextComponent("has awoken"), 40, 120, 40);
 
-        //check if the wither message has been sent, and send it if needed.
-        if (goalsDone() && worldData.getWitherState() == WorldData.ASLEEP && isBossRequired(APMCData.Bosses.WITHER)) {
-            worldData.setWitherState(WorldData.WAITING);
-            Utils.PlaySoundToAll(SoundEvents.WITHER_AMBIENT);
-            Utils.sendMessageToAll("The Darkness is calling...");
-            Utils.sendTitleToAll(Component.literal("The Darkness").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(java.awt.Color.BLACK.getRGB()))), Component.literal("is calling..."), 40, 120, 40);
+            Utils.SpawnDragon(end);
         }
     }
 
@@ -182,32 +180,18 @@ public class GoalManager {
     //subscribe to living death event to check for wither/dragon kills;
     @SubscribeEvent
     static void onBossDeath(LivingDeathEvent event) {
-        LivingEntity mob = event.getEntity();
+        LivingEntity mob = event.getEntityLiving();
         GoalManager goalManager = APRandomizer.getGoalManager();
-        if(mob instanceof EnderDragon && goalManager.goalsDone() && isBossRequired(APMCData.Bosses.ENDER_DRAGON)) {
+        if(mob instanceof EnderDragon && goalManager.goalsDone()) {
             goalManager.dragonKilled = true;
             Utils.sendMessageToAll("She is no more...");
             goalManager.updateGoal(false);
         }
-        if(mob instanceof WitherBoss && goalManager.goalsDone() && isBossRequired(APMCData.Bosses.WITHER)) {
+        if(mob instanceof WitherBoss && goalManager.goalsDone()) {
             goalManager.witherKilled = true;
             Utils.sendMessageToAll("The Darkness has lifted...");
             goalManager.updateGoal(true);
         }
-    }
-
-    // check APMC.required_bosses to see if the boss is required
-    public static boolean isBossRequired(APMCData.Bosses boss) {
-        var required = APRandomizer.getApmcData().required_bosses;
-
-        // if it matches our goal its true
-        if (required == boss) return true;
-        // a boss is required and you asked about none.
-        if (boss == APMCData.Bosses.NONE) return false;
-        // if both boses are required and you didn't ask about none return ture;
-        if (required == APMCData.Bosses.BOTH) return true;
-
-        return false;
     }
 
     public boolean isDragonDead() {

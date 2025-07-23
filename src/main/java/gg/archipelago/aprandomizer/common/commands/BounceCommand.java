@@ -1,18 +1,15 @@
 package gg.archipelago.aprandomizer.common.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import gg.archipelago.APClient.network.BouncePacket;
 import gg.archipelago.aprandomizer.APRandomizer;
-import dev.koifysh.archipelago.network.client.BouncePacket;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.CompoundTagArgument;
-import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.EntitySummonArgument;
 import net.minecraft.commands.synchronization.SuggestionProviders;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -28,17 +25,17 @@ public class BounceCommand {
     private static final Logger LOGGER = LogManager.getLogger();
 
     //build our command structure and submit it
-    public static void Register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext pContext) {
+    public static void Register(CommandDispatcher<CommandSourceStack> dispatcher) {
 
         dispatcher.register(Commands.literal("bounce") //base slash command is "connect"
                 // first make sure its NOT a dedicated server (aka single player or hosted via in game client, OR user has an op level of 1)
                 .requires((CommandSource) -> (!CommandSource.getServer().isDedicatedServer() || CommandSource.hasPermission(1)))
                 //take the first argument as a string and name it "Address"
-                .then(Commands.argument("entity", ResourceArgument.resource(pContext, Registries.ENTITY_TYPE))
+                .then(Commands.argument("entity", EntitySummonArgument.id())
                         .suggests(SuggestionProviders.SUMMONABLE_ENTITIES)
                         .executes(context ->
                                 bounceEntity(context.getSource(),
-                                        ResourceArgument.getSummonableEntityType(context, "entity"),
+                                        EntitySummonArgument.getSummonableEntity(context, "entity"),
                                         new CompoundTag()
                                 )
                         )
@@ -46,8 +43,8 @@ public class BounceCommand {
                                 .executes(context ->
                                         bounceEntity(
                                                 context.getSource(),
-                                                ResourceArgument.getSummonableEntityType(context, "entity"),
-                                                CompoundTagArgument.getCompoundTag(context, "nbt")
+                                                EntitySummonArgument.getSummonableEntity(context,"entity"),
+                                                CompoundTagArgument.getCompoundTag(context,"nbt")
                                         )
                                 )
                         )
@@ -58,10 +55,10 @@ public class BounceCommand {
 
     }
 
-    private static int bounceEntity(CommandSourceStack commandSource, Holder.Reference<EntityType<?>> entity, CompoundTag nbt) {
+    private static int bounceEntity(CommandSourceStack commandSource, ResourceLocation entity, CompoundTag nbt) {
         BouncePacket packet = new BouncePacket();
         packet.tags = new String[]{"MC35"};
-        packet.setData(new HashMap<String, Object>() {{
+        packet.setData(new HashMap<String, Object>(){{
             put("enemy", entity.toString());
             put("source", APRandomizer.getAP().getSlot());
             put("nbt", nbt.toString());
@@ -73,6 +70,6 @@ public class BounceCommand {
     //wait for register commands event then register ourself as a command.
     @SubscribeEvent
     static void onRegisterCommandsEvent(RegisterCommandsEvent event) {
-        BounceCommand.Register(event.getDispatcher(),event.getBuildContext());
+        BounceCommand.Register(event.getDispatcher());
     }
 }

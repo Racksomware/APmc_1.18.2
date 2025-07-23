@@ -1,13 +1,14 @@
 package gg.archipelago.aprandomizer;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.annotations.SerializedName;
+import archipelagoClient.com.google.gson.JsonArray;
+import archipelagoClient.com.google.gson.JsonElement;
+import archipelagoClient.com.google.gson.JsonObject;
+import archipelagoClient.com.google.gson.JsonParser;
+import archipelagoClient.com.google.gson.annotations.SerializedName;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import gg.archipelago.aprandomizer.common.Utils.Utils;
 import net.minecraft.ResourceLocationException;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -17,7 +18,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 
-public class SlotData {
+public class SlotData extends gg.archipelago.APClient.SlotData {
 
     public int include_hard_advancements;
     public int include_insane_advancements;
@@ -78,13 +79,17 @@ public class SlotData {
                     continue;
                 }
 
+                String nbtString = (object.has("nbt"))? object.get("nbt").getAsString() : "{}";
+                CompoundTag nbt = TagParser.parseTag(nbtString);
+
+
                 ItemStack iStack = new ItemStack(item,amount);
-                // TODO: figure out how to parse a string of components into actual components
-//                if(object.has("nbt"))
-//                    iStack.setTag(TagParser.parseTag(object.get("nbt").getAsString()));
+                iStack.setTag(nbt);
 
                 startingItemStacks.add(iStack);
 
+            } catch (CommandSyntaxException e) {
+                Utils.sendMessageToAll("NBT error in starting item " + itemName);
             } catch (ResourceLocationException e) {
                 Utils.sendMessageToAll("No such item \"" + itemName + "\"");
             }

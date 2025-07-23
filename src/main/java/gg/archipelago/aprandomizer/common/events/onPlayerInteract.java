@@ -2,7 +2,7 @@ package gg.archipelago.aprandomizer.common.events;
 
 import gg.archipelago.aprandomizer.APRandomizer;
 import gg.archipelago.aprandomizer.managers.itemmanager.ItemManager;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -27,7 +27,6 @@ public class onPlayerInteract {
 
     @SubscribeEvent
     static void onPlayerBlockInteract(PlayerInteractEvent event) {
-        if (event.getSide().isClient()) return;
         //stop all right click interactions if game has not started.
         if(APRandomizer.isJailPlayers())
             event.setCanceled(true);
@@ -35,18 +34,17 @@ public class onPlayerInteract {
 
     @SubscribeEvent
     static void onPlayerBlockInteract(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getSide().isClient()) return;
         if(!event.getItemStack().getItem().equals(Items.COMPASS) || !event.getItemStack().hasTag()) {
             return;
         }
 
-        BlockState block = event.getLevel().getBlockState(event.getHitVec().getBlockPos());
+        BlockState block = event.getWorld().getBlockState(event.getHitVec().getBlockPos());
         if(event.getItemStack().getTag().get("structure") != null && block.is(Blocks.LODESTONE))
             event.setCanceled(true);
 
-        event.getEntity().getServer().execute(() -> {
-            event.getEntity().getInventory().setChanged();
-            event.getEntity().inventoryMenu.broadcastChanges();
+        event.getPlayer().getServer().execute(() -> {
+            event.getPlayer().getInventory().setChanged();
+            event.getPlayer().inventoryMenu.broadcastChanges();
         });
     }
 
@@ -63,17 +61,17 @@ public class onPlayerInteract {
                 return;
 
             //fetch our current compass list.
-            ArrayList<TagKey<Structure>> compasses = APRandomizer.getItemManager().getCompasses();
+            ArrayList<TagKey<ConfiguredStructureFeature<?,?>>> compasses = APRandomizer.getItemManager().getCompasses();
 
-            TagKey<Structure> tagKey = TagKey.create(Registries.STRUCTURE, new ResourceLocation(nbt.getString("structure")));
+            TagKey<ConfiguredStructureFeature<?, ?>> tagKey = TagKey.create(Registry.CONFIGURED_STRUCTURE_FEATURE_REGISTRY, new ResourceLocation(nbt.getString("structure")));
             //get our current structures index in that list, increase it by one, wrapping it to 0 if needed.
             int index = compasses.indexOf(tagKey) + 1;
             if(index >= compasses.size())
                 index = 0;
 
-            TagKey<Structure> structure = compasses.get(index);
+            TagKey<ConfiguredStructureFeature<?,?>> structure = compasses.get(index);
 
-            ItemManager.updateCompassLocation(structure,event.getEntity(),compass);
+            ItemManager.updateCompassLocation(structure,event.getPlayer(),compass);
 
         }
     }

@@ -1,9 +1,6 @@
 package gg.archipelago.aprandomizer.managers.recipemanager;
 
-import gg.archipelago.aprandomizer.APRandomizer;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,22 +10,22 @@ import java.util.Set;
 public class ProgressiveRecipe implements APRecipe {
 
     int id;
-    String trackingAdvancementBase;
+    String name;
     ArrayList<String[]> namespaceIDs;
-    List<Set<RecipeHolder<?>>> recipes = new ArrayList<>();
+    List<Set<Recipe<?>>> recipes = new ArrayList<>();
     int currentTier = 0;
-    int totalTiers;
 
-    ProgressiveRecipe(int id, String trackingAchievement, ArrayList<String[]> namespaceIDs) {
+    ProgressiveRecipe(int id, String name, ArrayList<String[]> namespaceIDs) {
         super();
         this.id = id;
+        this.name = name;
         this.namespaceIDs = namespaceIDs;
-        this.totalTiers = namespaceIDs.size();
-        this.trackingAdvancementBase = trackingAchievement;
-        namespaceIDs.forEach((namespaceID) -> recipes.add(new HashSet<>()));
+        for (int i = 0; i < namespaceIDs.size(); i++) {
+            recipes.add(new HashSet<>());
+        }
     }
 
-    protected void addIRecipe(RecipeHolder<?> iRecipe, int tier) {
+    protected void addIRecipe(Recipe<?> iRecipe, int tier) {
         this.recipes.get(tier).add(iRecipe);
     }
 
@@ -40,7 +37,7 @@ public class ProgressiveRecipe implements APRecipe {
         this.currentTier = tier;
     }
 
-    public Set<RecipeHolder<?>> getTier(int tier) {
+    public Set<Recipe<?>> getTier(int tier) {
         if (recipes.size() >= tier)
             return recipes.get(tier - 1);
         return recipes.get(recipes.size() - 1);
@@ -48,16 +45,7 @@ public class ProgressiveRecipe implements APRecipe {
 
 
     @Override
-    public Set<RecipeHolder<?>> getGrantedRecipes() {
+    public Set<Recipe<?>> getGrantedRecipes() {
         return getTier(++currentTier);
-    }
-
-    @Override
-    public Set<ResourceLocation> getUnlockedTrackingAdvancements() {
-        HashSet<ResourceLocation> trackingAdvancements = new HashSet<>();
-        for (int i = 1; i <= currentTier; i++) {
-            trackingAdvancements.add(new ResourceLocation(APRandomizer.MODID,"received/"+ trackingAdvancementBase + "_" + i));
-        }
-        return trackingAdvancements;
     }
 }

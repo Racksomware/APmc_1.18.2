@@ -1,20 +1,26 @@
 package gg.archipelago.aprandomizer.common.Utils;
 
-import dev.koifysh.archipelago.Print.APPrint;
-import dev.koifysh.archipelago.Print.APPrintColor;
-import dev.koifysh.archipelago.Print.APPrintPart;
-import dev.koifysh.archipelago.Print.APPrintType;
-import static dev.koifysh.archipelago.flags.NetworkItem.ADVANCEMENT;
-import static dev.koifysh.archipelago.flags.NetworkItem.TRAP;
-import static dev.koifysh.archipelago.flags.NetworkItem.USEFUL;
-import static gg.archipelago.aprandomizer.APRandomizer.server;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import gg.archipelago.APClient.Print.APPrint;
+import gg.archipelago.APClient.Print.APPrintColor;
+import gg.archipelago.APClient.Print.APPrintPart;
+import gg.archipelago.APClient.Print.APPrintType;
 import gg.archipelago.aprandomizer.APRandomizer;
+import gg.archipelago.aprandomizer.APStructures;
+import gg.archipelago.aprandomizer.capability.APCapabilities;
+import gg.archipelago.aprandomizer.capability.data.WorldData;
+import net.minecraft.Util;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.*;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.chat.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -23,110 +29,121 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.level.levelgen.feature.StructureFeature;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.awt.*;
-import java.util.*;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Utils {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
+    /**
+     * @param source command source to send the message.
+     * @param Message Message to send
+     * send a message to whoever ran the command.
+     */
 
+    private static final MinecraftServer server = APRandomizer.getServer();
+
+    public static void SendMessage(CommandSourceStack source, String Message) {
+        try {
+            ServerPlayer player = source.getPlayerOrException();
+            player.sendMessage(new TextComponent(Message), Util.NIL_UUID);
+        } catch (CommandSyntaxException e) {
+            source.getServer().sendMessage(new TextComponent(Message), Util.NIL_UUID);
+        }
+    }
 
     public static void sendMessageToAll(String message) {
-        sendMessageToAll(Component.literal(message));
+        sendMessageToAll(new TextComponent(message));
     }
 
     public static void sendMessageToAll(Component message) {
         //tell the server to send the message in a thread safe way.
-        server.execute(() -> server.getPlayerList().broadcastSystemMessage(message, false));
+        server.execute(() -> {
+            server.getPlayerList().broadcastMessage(message, ChatType.SYSTEM, Util.NIL_UUID);
+        });
+
     }
 
     public static void sendFancyMessageToAll(APPrint apPrint) {
         Component message = Utils.apPrintToTextComponent(apPrint);
 
         //tell the server to send the message in a thread safe way.
-        server.execute(() -> server.getPlayerList().broadcastSystemMessage(message, false));
+        server.execute(() -> {
+            server.getPlayerList().broadcastMessage(message, ChatType.SYSTEM, Util.NIL_UUID);
+        });
 
     }
 
     public static Component apPrintToTextComponent(APPrint apPrint) {
-        boolean isMe = apPrint.receiving == APRandomizer.getAP().getSlot();
-
-        MutableComponent message = Component.literal("");
+        TextComponent message = new TextComponent("");
         for (int i = 0; apPrint.parts.length > i; ++i) {
             APPrintPart part = apPrint.parts[i];
-            LOGGER.trace("part[{}]: {}, {}, {}", i, part.text, part.color, part.type);
+            LOGGER.trace("part[" + i + "]: " + part.text + ", " + part.color + ", " + part.type);
+            Style style = Style.EMPTY;
             //no default color was sent so use our own coloring.
-            Color color = isMe ? Color.PINK : Color.WHITE;
+            Color color = Color.WHITE;
             boolean bold = false;
             boolean underline = false;
 
             if (part.color == APPrintColor.none) {
                 if (APRandomizer.getAP().getMyName().equals(part.text)) {
-                    color = Color.decode("#EE00EE");
-                    underline = true;
+                    color = APPrintColor.gold.color;
+                    bold = true;
                 } else if (part.type == APPrintType.playerID) {
-                    color = Color.decode("#FAFAD2");
+                    color = APPrintColor.yellow.color;
                 } else if (part.type == APPrintType.locationID) {
-                    color = Color.decode("#00FF7F");
+                    color = APPrintColor.green.color;
                 } else if (part.type == APPrintType.itemID) {
-                    if ((part.flags & ADVANCEMENT) == ADVANCEMENT) {
-                        color = Color.decode("#00EEEE"); // advancement
-                    }
-                    else if ((part.flags & USEFUL) == USEFUL) {
-                        color = Color.decode("#6D8BE8"); // useful
-                    }
-                    else if ((part.flags & TRAP) == TRAP) {
-                        color = Color.decode("#FA8072"); // trap
-                    } else {
-                        color = Color.gray;
-                    }
+                    color = APPrintColor.cyan.color;
                 }
 
-            }
+            } else if (part.color == APPrintColor.underline)
+                underline = true;
+            else if (part.color == APPrintColor.bold)
+                bold = true;
             else
                 color = part.color.color;
 
-            if (part.color == APPrintColor.underline)
-                underline = true;
-
-            if (part.color == APPrintColor.bold)
-                bold = true;
-
-
             //blank out the first two bits because minecraft doesn't deal with alpha values
             int iColor = color.getRGB() & ~(0xFF << 24);
-            Style style = Style.EMPTY.withColor(iColor).withBold(bold).withUnderlined(underline);
+            style = Style.EMPTY.withColor(iColor).withBold(bold).withUnderlined(underline);
 
-            message.append(Component.literal(part.text).withStyle(style));
+            message.append(new TextComponent(part.text).withStyle(style));
         }
         return message;
     }
 
     public static void sendTitleToAll(Component title, Component subTitle, int fadeIn, int stay, int fadeOut) {
-        server.execute(() -> TitleQueue.queueTitle(new QueuedTitle(server.getPlayerList().getPlayers(), fadeIn, stay, fadeOut, subTitle, title)));
+        server.execute(() -> {
+            TitleQueue.queueTitle(new QueuedTitle(server.getPlayerList().getPlayers(), fadeIn, stay, fadeOut, subTitle, title));
+        });
     }
 
     public static void sendTitleToAll(Component title, Component subTitle, Component chatMessage, int fadeIn, int stay, int fadeOut) {
-        server.execute(() -> TitleQueue.queueTitle(new QueuedTitle(server.getPlayerList().getPlayers(), fadeIn, stay, fadeOut, subTitle, title, chatMessage)));
+        server.execute(() -> {
+            TitleQueue.queueTitle(new QueuedTitle(server.getPlayerList().getPlayers(), fadeIn, stay, fadeOut, subTitle, title, chatMessage));
+        });
     }
 
     public static void sendActionBarToAll(String actionBarMessage, int fadeIn, int stay, int fadeOut) {
         server.execute(() -> {
             TitleUtils.setTimes(server.getPlayerList().getPlayers(), fadeIn, stay, fadeOut);
-            TitleUtils.showActionBar(server.getPlayerList().getPlayers(), Component.literal(actionBarMessage));
+            TitleUtils.showActionBar(server.getPlayerList().getPlayers(), new TextComponent(actionBarMessage));
         });
     }
 
     public static void sendActionBarToPlayer(ServerPlayer player, String actionBarMessage, int fadeIn, int stay, int fadeOut) {
         server.execute(() -> {
             TitleUtils.setTimes(Collections.singletonList(player), fadeIn, stay, fadeOut);
-            TitleUtils.showActionBar(Collections.singletonList(player), Component.literal(actionBarMessage));
+            TitleUtils.showActionBar(Collections.singletonList(player), new TextComponent(actionBarMessage));
         });
     }
 
@@ -138,9 +155,20 @@ public class Utils {
         });
     }
 
-    public static ResourceKey<Level> getStructureWorld(TagKey<Structure> structureTag) {
+    public static void SpawnDragon(ServerLevel end) {
+        end.getChunkAt(new BlockPos(0, 128, 0));
+        end.dragonFight.spawnExitPortal(false);
+        end.dragonFight.findOrCreateDragon();
+        end.dragonFight.dragonKilled = false;
+        end.dragonFight.previouslyKilled = false;
+        end.getCapability(APCapabilities.WORLD_DATA).orElseThrow(AssertionError::new).setDragonState(WorldData.DRAGON_SPAWNED);
+        end.save(null, true, false);
+    }
+
+    public static ResourceKey<Level> getStructureWorld(TagKey<ConfiguredStructureFeature<?,?>> structureTag) {
 
         String structureName = getAPStructureName(structureTag);
+        String world = "overworld";
         //fetch what structures are where from our APMC data.
         HashMap<String, String> structures = APRandomizer.getApmcData().structures;
         for (Map.Entry<String, String> entry : structures.entrySet()) {
@@ -160,7 +188,7 @@ public class Utils {
         return Level.OVERWORLD;
     }
 
-    public static String getAPStructureName(TagKey<Structure> structureTag) {
+    public static String getAPStructureName(TagKey<ConfiguredStructureFeature<?,?>> structureTag) {
         return switch (structureTag.location().toString()) {
             case "aprandomizer:village" -> "Village";
             case "aprandomizer:end_city" -> "End City";
@@ -196,42 +224,15 @@ public class Utils {
             if (itementity1 != null) {
                 itementity1.makeFakeItem();
             }
-            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
+
+            player.level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
             player.inventoryMenu.broadcastChanges();
         } else {
             ItemEntity itementity = player.drop(itemstack, false);
             if (itementity != null) {
                 itementity.setNoPickUpDelay();
-                itementity.setTarget(player.getUUID());
+                itementity.setOwner(player.getUUID());
             }
         }
-    }
-
-    public static void setNameAndLore(ItemStack itemstack, String itemName, Collection<String> itemLore) {
-        setItemName(itemstack, itemName);
-        setItemLore(itemstack, itemLore);
-    }
-
-    public static void setNameAndLore(ItemStack itemstack, Component itemName, Collection<String> itemLore) {
-        setItemName(itemstack, itemName);
-        setItemLore(itemstack, itemLore);
-    }
-
-    public static void setItemName(ItemStack itemstack, String itemName) {
-        itemstack.setHoverName(Component.literal(itemName));
-    }
-
-    public static void setItemName(ItemStack itemstack, Component itemName) {
-        itemstack.setHoverName(itemName);
-    }
-
-    public static void setItemLore(ItemStack iStack, Collection<String> itemLore) {
-        CompoundTag compoundnbt = iStack.getOrCreateTagElement("display");
-        ListTag itemLoreLines = new ListTag();
-        for (String line : itemLore) {
-            StringTag lineTag = StringTag.valueOf(Component.Serializer.toJson(Component.literal(line)));
-            itemLoreLines.add(lineTag);
-        }
-        compoundnbt.put("Lore",itemLoreLines);
     }
 }

@@ -1,7 +1,6 @@
 package gg.archipelago.aprandomizer.managers.recipemanager;
 
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,29 +14,29 @@ public class RecipeData {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
 
-    HashMap<Long, GroupRecipe> recipes = new HashMap<>() {{
-        put(45000L, new GroupRecipe(45000, "archery", new String[]{
+    HashMap<Integer, GroupRecipe> recipes = new HashMap<>() {{
+        put(45000, new GroupRecipe(45000, "Archery", new String[]{
                 "minecraft:bow",
                 "minecraft:arrow",
                 "minecraft:crossbow"
         }));
         //put(45001, new GroupRecipe(45001, "Ingot Crafting", new String[]{"minecraft:iron_ingot_from_nuggets", "minecraft:iron_nugget", "minecraft:gold_ingot_from_nuggets", "minecraft:gold_nugget", "minecraft:furnace", "minecraft:blast_furnace"}));
         //put(45002, new GroupRecipe(45002, "Resource Blocks", new String[]{"minecraft:redstone_block", "minecraft:redstone", "minecraft:glowstone", "minecraft:iron_ingot_from_iron_block", "minecraft:iron_block", "minecraft:gold_block", "minecraft:gold_block", "minecraft:gold_ingot_from_gold_block", "minecraft:diamond", "minecraft:diamond_block", "minecraft:netherite_block", "minecraft:netherite_ingot_from_netherite_block", "minecraft:anvil"}));
-        put(45003L, new GroupRecipe(45003, "brewing", new String[]{
+        put(45003, new GroupRecipe(45003, "Brewing", new String[]{
                 "minecraft:blaze_powder",
                 "minecraft:brewing_stand"
         }));
-        put(45004L, new GroupRecipe(45004, "enchanting", new String[]{
+        put(45004, new GroupRecipe(45004, "Enchanting", new String[]{
                 "minecraft:enchanting_table",
                 "minecraft:bookshelf"
         }));
-        put(45005L, new GroupRecipe(45005, "bucket", new String[]{
+        put(45005, new GroupRecipe(45005, "Bucket", new String[]{
                 "minecraft:bucket"
         }));
-        put(45006L, new GroupRecipe(45006, "flint_and_steel", new String[]{
+        put(45006, new GroupRecipe(45006, "Flint & Steel", new String[]{
                 "minecraft:flint_and_steel"
         }));
-        put(45007L, new GroupRecipe(45007, "beds", new String[]{
+        put(45007, new GroupRecipe(45007, "Bed", new String[]{
                 "minecraft:black_bed",
                 "minecraft:blue_bed",
                 "minecraft:brown_bed",
@@ -55,32 +54,29 @@ public class RecipeData {
                 "minecraft:white_bed",
                 "minecraft:yellow_bed"
         }));
-        put(45008L, new GroupRecipe(45008, "bottles", new String[]{
+        put(45008, new GroupRecipe(45008, "Bottles", new String[]{
                 "minecraft:glass_bottle"
         }));
-        put(45009L, new GroupRecipe(45009, "shield", new String[]{
+        put(45009, new GroupRecipe(45009, "Shield", new String[]{
                 "minecraft:shield"
         }));
-        put(45010L, new GroupRecipe(45010, "fishing", new String[]{
+        put(45010, new GroupRecipe(45010, "Fishing Rod", new String[]{
                 "minecraft:fishing_rod",
                 "minecraft:carrot_on_a_stick",
                 "minecraft:warped_fungus_on_a_stick"
         }));
-        put(45011L, new GroupRecipe(45011, "campfires", new String[]{
+        put(45011, new GroupRecipe(45011, "Campfire", new String[]{
                 "minecraft:campfire",
                 "minecraft:soul_campfire"
         }));
-        put(45044L, new GroupRecipe(45044, "spyglass", new String[]{
+        put(45044, new GroupRecipe(45044, "Spyglass", new String[]{
                 "minecraft:spyglass"
-        }));
-        put(45045L, new GroupRecipe(45044, "lead", new String[]{
-                "minecraft:lead"
         }));
     }};
 
-    HashMap<Long, ProgressiveRecipe> progressiveRecipes = new HashMap<>() {{
-        put(45012L,
-                new ProgressiveRecipe(45012, "progressive_weapons",
+    HashMap<Integer, ProgressiveRecipe> progressiveRecipes = new HashMap<>() {{
+        put(45012,
+                new ProgressiveRecipe(45012, "Progressive Weapons",
                         new ArrayList<>(
                                 Arrays.asList(
                                         new String[]{
@@ -99,8 +95,8 @@ public class RecipeData {
                         )
                 )
         );
-        put(45013L,
-                new ProgressiveRecipe(45013, "progressive_tools",
+        put(45013,
+                new ProgressiveRecipe(45013, "Progressive Tools",
                         new ArrayList<>(
                                 Arrays.asList(
                                         new String[]{"minecraft:stone_pickaxe",
@@ -119,8 +115,8 @@ public class RecipeData {
                         )
                 )
         );
-        put(45014L,
-                new ProgressiveRecipe(45013, "progressive_armor",
+        put(45014,
+                new ProgressiveRecipe(45013, "Progressive Armor",
                         new ArrayList<>(
                                 Arrays.asList(
                                         new String[]{
@@ -138,8 +134,8 @@ public class RecipeData {
                         )
                 )
         );
-        put(45001L,
-                new ProgressiveRecipe(45001, "progressive_resource_crafting",
+        put(45001,
+                new ProgressiveRecipe(45001, "Progressive Resource Crafting",
                         new ArrayList<>(
                                 Arrays.asList(
                                         new String[]{
@@ -173,22 +169,24 @@ public class RecipeData {
         );
     }};
 
-    protected boolean injectIRecipe(RecipeHolder<?> iRecipe) {
-        for (var entry : recipes.entrySet()) {
+    protected boolean injectIRecipe(Recipe<?> iRecipe) {
+        for (Map.Entry<Integer, GroupRecipe> entry : recipes.entrySet()) {
             for (String namespaceID : entry.getValue().namespaceIDs) {
-                LOGGER.trace("checking {} vs {},", iRecipe.id().toString(), namespaceID);
-                if (iRecipe.id().toString().equals(namespaceID)) {
+                LOGGER.trace("checking {} vs {},", iRecipe.getId().toString(), namespaceID);
+                if (iRecipe.getId().toString().equals(namespaceID)) {
+                    LOGGER.trace("injected recipe {} into {},", iRecipe.getResultItem().getDisplayName().getString(), namespaceID);
                     entry.getValue().addIRecipe(iRecipe);
                     return true;
                 }
             }
         }
-        for (var entry : progressiveRecipes.entrySet()) {
+        for (Map.Entry<Integer, ProgressiveRecipe> entry : progressiveRecipes.entrySet()) {
             for (int i = 0; entry.getValue().namespaceIDs.size() > i; ++i) {
                 String[] namespaceIDs = entry.getValue().namespaceIDs.get(i);
                 for (String s : namespaceIDs) {
-                    LOGGER.trace("checking {} vs {},", iRecipe.id().toString(), s);
-                    if (iRecipe.id().toString().equals(s)) {
+                    LOGGER.trace("checking {} vs {},", iRecipe.getId().toString(), s);
+                    if (iRecipe.getId().toString().equals(s)) {
+                        LOGGER.trace("injected recipe {} into {} at tier {}", iRecipe.getResultItem().getDisplayName().getString(), s, i + 1);
                         entry.getValue().addIRecipe(iRecipe, i);
                         return true;
                     }
@@ -198,11 +196,11 @@ public class RecipeData {
         return false;
     }
 
-    public boolean hasID(long id) {
+    public boolean hasID(int id) {
         return recipes.containsKey(id) || progressiveRecipes.containsKey(id);
     }
 
-    public APRecipe getID(long id) {
+    public APRecipe getID(int id) {
         if (recipes.containsKey(id)) {
             return recipes.get(id);
         } else if (progressiveRecipes.containsKey(id)) {

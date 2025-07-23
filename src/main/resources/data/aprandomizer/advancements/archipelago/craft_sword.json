@@ -1,21 +1,29 @@
 {
+  "parent": "aprandomizer:archipelago/get_wood",
   "display": {
     "icon": {
       "item": "minecraft:wooden_sword"
     },
-    "title": "Time to Strike!",
-    "description": "Use planks and sticks to make a sword",
+    "title": {
+      "text": "Time to Strike!"
+    },
+    "description": {
+      "text": "Use planks and sticks to make a sword"
+    },
     "frame": "task",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
-  "parent": "aprandomizer:archipelago/get_wood",
   "criteria": {
     "get_sword": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "minecraft:inventory_changed",
       "conditions": {
-        "recipe_id": "minecraft:wooden_sword"
+        "items": [
+          {
+            "items": ["minecraft:wooden_sword"]
+          }
+        ]
       }
     }
   },
